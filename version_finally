@@ -1,0 +1,70 @@
+import sqlite3
+import smtplib
+import sys
+import time
+
+def create_table(): 
+    connection = sqlite3.connect(«myTable.db»)
+    crsr = connection.cursor()
+
+    sql_command = '''
+    CREATE TABLE task (
+      ID INT NOT NULL AUTO_INCREMENT,
+      ID_USERS INT NOT NULL,
+      title VARCHAR(100) NOT NULL,
+      text VARCHAR(200) NOT NULL,
+      dateBegin DATE NOT NULL,
+      dateEnd DATE NOT NULL,
+      PRIMARY KEY (ID),
+      UNIQUE INDEX ID_UNIQUE (ID ASC) VISIBLE)
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4;
+
+    CREATE TABLE users (
+      ID INT NOT NULL AUTO_INCREMENT,
+      FIO VARCHAR(100) NOT NULL,
+      mail VARCHAR(100) NOT NULL,
+      PRIMARY KEY (ID),
+      UNIQUE INDEX ID_UNIQUE (ID ASC) VISIBLE)
+    ENGINE = InnoDB
+    DEFAULT CHARACTER SET = utf8mb4;
+
+
+    ALTER TABLE task 
+    ADD CONSTRAINT fk_users
+      FOREIGN KEY (ID_USERS)
+      REFERENCES users (ID)
+      ON DELETE CASCADE
+      ON UPDATE CASCADE;
+    '''   
+
+    crsr.execute(sql_command)  
+    connection.commit()
+    crsr.execute(«SELECT SELECT FIO, mail, title  FROM task, users where dateEnd = CURDATE() »)
+    ans = crsr.fetchall()
+    connection.close()
+    fio = [x[0] for x in ans]
+    toaddr = [x[1] for x in ans]
+    title = [x[2] for x in ans]
+    
+def send_mail():
+    for mail in toaddr:
+        fromaddr = 'account@gmail.com'
+        subj = 'Deadline'
+        msg_txt = "Уважаемый %s\nЗадача: %sне выполнена во время."  % (fio, title)
+        msg = "From: %s\nTo: %s\nSubject: %s\n\n%s"  % ( fromaddr, toaddr, subj, msg_txt)
+        username = 'account'
+        password = 'password'
+        server = smtplib.SMTP('smtp.gmail.com:587')
+        server.set_debuglevel(1);
+        server.starttls()
+        server.login(username,password)
+        server.sendmail(fromaddr, toaddr, msg)
+        server.quit()
+
+def work():
+	create_table() 
+	send_mail() 
+	
+
+work()
